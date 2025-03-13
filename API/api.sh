@@ -21,10 +21,11 @@ collect_metrics() {
 
         METRIC="{\"time\": \"$TIMESTAMP\", \"cpu\": \"$CPU%\", \"memory\": \"$MEM\", \"io\": \"$IO\", \"filesystem\": \"$FS\", \"power\": \"$POWER%\"}"
         
-        echo "$METRIC" > $PIPE
+        echo "$METRIC"
+        echo "$METRIC" > $PIPE & #we run writing to the pipe in the background to prevent stoppage
         echo "$METRIC" >> $LOG_FILE  # Store for history
         
-        sleep 15  #HERE WE CAN CHANGE OUR INTERVAL FOR TESTS
+        sleep 5  #HERE WE CAN CHANGE OUR INTERVAL FOR TESTS
     done
 }
 
@@ -43,13 +44,14 @@ while true; do
             # Format today's date for comparison
             TODAY=$(date "+%Y-%m-%d")
             # Get current time minus 1 minute
-            CURRENT_TIME=$(date -d "1 minute ago" "+%H:%M") 
+            CURRENT_TIME=$(date "+%H:%M") 
             #we would use awk to better handle strings and be able to compare time
             #@note THIS IS ONLY GRABING DATA FROM TODAY
             HIST_DATA=$(awk -v start="$TODAY $REQ_TIME" -v end="$TODAY $CURRENT_TIME" '
-        $0 ~ /\"time\"/ {
+        $0 ~ /"time"/ {
             #Get the timestamp
             match($0, /"time": "([^"]+)"/, timestamp)
+            #ts is now the current time stamp in the file
             ts = timestamp[1]
             
             #using awk, we can quickly compare the timestamps
