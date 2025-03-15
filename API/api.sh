@@ -1,12 +1,17 @@
 #!/bin/bash
 
 PIPE="/tmp/metrics_pipe"
-LOG_FILE="/tmp/metrics.log"
+LOG_FILE="/opt/system-monitoring/logs/metrics.log"
 PORT=5000
+
+mkdir -p $(dirname "$LOG_FILE")
 
 # Create the named pipe
 if [[ ! -p $PIPE ]]; then
     mkfifo $PIPE
+    chown root:monitoring $PIPE
+    chmod 660 $PIPE # Group can read/write
+
 fi
 
 # what we will use to collect metrics (local use only)
@@ -17,9 +22,9 @@ collect_metrics() {
         MEM=$(free -m | awk 'NR==2{printf "%s/%s MB (%.2f%%)", $3, $2, $3*100/$2}')
         IO=$(iostat | awk 'NR==4 {print $1}')  
         FS=$(df -h / | awk 'NR==2{print $5}') 
-        POWER=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo "N/A")
+        LOAD_AVG=$(cat /proc/loadavg | awk '{printf "%.2f", $1}')
 
-        METRIC="{\"time\": \"$TIMESTAMP\", \"cpu\": \"$CPU%\", \"memory\": \"$MEM\", \"io\": \"$IO\", \"filesystem\": \"$FS\", \"power\": \"$POWER%\"}"
+        METRIC="{\"time\": \"$TIMESTAMP\", \"cpu\": \"$CPU%\", \"memory\": \"$MEM\", \"io\": \"$IO\", \"filesystem\": \"$FS\", \"load\": \"$LOAD_AVG\"}"
         
         echo "$METRIC"
         echo "$METRIC" > $PIPE & #we run writing to the pipe in the background to prevent stoppage
