@@ -7,12 +7,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from MetricsClient import MetricsClient
 import time
 
-# Server configurations
-SERVERS = {
-    "Server 1": "FIRST_GCP_IP",
-    "Server 2": "SECOND_GCP_IP",
-    "Server 3": "THIRD_GCP_IP"
-}
 
 # Thresholds and colors
 THRESHOLDS = {
@@ -103,13 +97,13 @@ class ServerDashboard:
             self.canvas.draw()
 
 class MainApplication:
-    def __init__(self, root):
+    def __init__(self, root, servers_dict):
         self.root = root
         self.root.title("Multi-Server Performance Dashboard")
         self.root.geometry("1800x600")
         
         self.dashboards = {}
-        for server_name, server_ip in SERVERS.items():
+        for server_name, server_ip in servers_dict.items():
             self.dashboards[server_name] = ServerDashboard(root, server_name, server_ip)
     
     def update_all(self):

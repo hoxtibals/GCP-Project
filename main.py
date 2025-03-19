@@ -34,9 +34,9 @@ def test_connections(servers):
 def main():
     # Server configurations
     SERVERS = {
-        "Server Connor": "34.28.184.125",  # Replace with actual IP
-        "Server Tirth": "34.41.106.40",  # Replace with actual IP
-        "Server Piash": "35.184.29.254"    # Replace with actual IP
+        "Server Connor": "34.59.226.32", 
+        "Server Tirth": "34.72.94.217",  
+        "Server Piash": "34.57.23.17"    
     }
 
     # Test connections first
@@ -52,7 +52,7 @@ def main():
         return
     
     # Create and start dashboard
-    app = MainApplication(root)
+    app = MainApplication(root, SERVERS)
     
     # Update UI to show initial connection status
     for server_name, connected in connection_status.items():
