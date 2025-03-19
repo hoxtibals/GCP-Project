@@ -1,5 +1,7 @@
 import requests
 from datetime import datetime
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 import json
 
 class MetricsClient:
@@ -7,6 +9,14 @@ class MetricsClient:
         """Initialize with dictionary of server names and IPs"""
         self.servers = servers_dict
         self.port = 5000
+        
+        self.session = requests.Session()
+        retries = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=[500, 502, 503, 504]
+        )
+        self.session.mount('http://', HTTPAdapter(max_retries=retries))
 
     def get_current_metrics(self):
         """Get current metrics from all servers"""
@@ -14,10 +24,12 @@ class MetricsClient:
         for name, ip in self.servers.items():
             try:  
                 url = f"http://{ip}:{self.port}"
-                response = requests.get(url, timeout=5)
+                response = self.session.get(url, timeout=5)
                 response.raise_for_status()
                 data = response.json()
                 results[name] = data
+                
+                response.close()
             except requests.exceptions.RequestException as e:
                 print(f"Error connecting to {name}: {e}")
                 results[name] = None
@@ -39,6 +51,12 @@ class MetricsClient:
                 print(f"Error getting history from {name}: {e}")
                 results[name] = None
         return results
+    
+    
+    def __del__(self):
+        """Cleanup session on object destruction"""
+        if hasattr(self, 'session'):
+            self.session.close()
 
 # Test the client
 if __name__ == "__main__":
