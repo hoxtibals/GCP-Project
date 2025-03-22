@@ -36,6 +36,8 @@ class ServerDashboard:
         self.setup_ui()
         self.data = {metric: [] for metric in ["CPU", "Memory", "Disk", "Network", "Load"]}
         self.x_data = []
+        self.timestamps = []
+        self.max_points = 18
         self.start_time = time.time()
 
     def setup_ui(self):
@@ -56,7 +58,11 @@ class ServerDashboard:
             
             if server_stats and isinstance(server_stats, dict):
                 current_time = time.time() - self.start_time
-                self.x_data.append(current_time)
+                self.timestamps.append(current_time)
+                
+                if len(self.timestamps)> self.max_points:
+                    #take away earliest datapoint
+                    self.timestamps.pop(0)
                 
                 # Update data for each metric with safe access
                 try:
@@ -70,16 +76,24 @@ class ServerDashboard:
                     
                     for metric, value in metric_mapping.items():
                         self.data[metric].append(value)
+                        if len(self.data[metric]) > self.max_points:
+                            self.data[metric].pop(0)
 
                     # Update plot
                     selected = self.metric_var.get()
+                    self.ax.clear()
+                    
                     current_value = self.data[selected][-1]
                     
                     self.ax.clear()
-                    bar_color = get_metric_color(current_value, selected)
-                    self.ax.bar([selected], [current_value], color=bar_color)
+                    line_color = get_metric_color(current_value, selected)
+                    self.ax.plot(self.timestamps, self.data[selected], color=line_color, marker='o', linestyle='-', linewidth=2)
                     self.ax.set_ylabel(f"{selected} Value")
                     self.ax.set_ylim(0, 100 if selected != "Load" else 5)
+                    self.ax.set_xlabel("Time(seconds)")
+                    self.ax.grid(True, linestyle='--', alpha=0.6)
+                    plt.setp(self.ax.get_xticklabels(), rotation=45)
+                    self.fig.tight_layout()
                     self.canvas.draw()
                 
                 except (ValueError, KeyError, IndexError) as e:

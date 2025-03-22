@@ -34,9 +34,9 @@ def test_connections(servers):
 def main():
     # Server configurations
     SERVERS = {
-        "Server Connor": "34.59.226.32", 
-        "Server Tirth": "34.72.94.217",  
-        "Server Piash": "34.57.23.17"    
+        "Server Connor": "34.56.72.213", 
+        "Server Tirth": "34.122.192.54",  
+        "Server Piash": "35.222.69.252"    
     }
 
     # Test connections first
