@@ -27,7 +27,7 @@ collect_metrics() {
         METRIC="{\"time\": \"$TIMESTAMP\", \"cpu\": \"$CPU%\", \"memory\": \"$MEM\", \"io\": \"$IO\", \"filesystem\": \"$FS\", \"load\": \"$LOAD_AVG\"}"
 
         echo "$METRIC"
-        echo "$METRIC" > $PIPE #we run writing to the pipe in the background to prevent stoppage
+        echo "$METRIC" > $PIPE 
         echo "$METRIC" >> $LOG_FILE  # Store for history
 
         sleep 5  #HERE WE CAN CHANGE OUR INTERVAL FOR TESTS
@@ -45,68 +45,12 @@ while true; do
         REQUEST=$(cat /tmp/request.tmp)
         rm -f /tmp/request.tmp
 
-        # Check if request is for history
-        if echo "$REQUEST" | grep -q "/history?time="; then
-            REQ_TIME=$(echo "$REQUEST" | grep -oP "(?<=/history\?time=)[0-9]{2}:[0-9]{2}")
-            # Format today's date for comparison
-            TODAY=$(date "+%Y-%m-%d")
-            # Get current time minus 1 minute
-            CURRENT_TIME=$(date "+%H:%M")
-            #we would use awk to better handle strings and be able to compare time
-            #@note THIS IS ONLY GRABING DATA FROM TODAY
-                        # ...existing code...
-            
-            # Modify the awk command to collect all matching entries
-            HIST_DATA=$(awk -v start="$TODAY $REQ_TIME" -v end="$TODAY $CURRENT_TIME" '
-                BEGIN { printf "[" }
-                /"time"/ {
-                    match($0, /time[[:space:]]*:[[:space:]]*"([^"]+)"/, timestamp)
-                    ts = timestamp[1]
-                    if (ts >= start && ts <= end) {
-                        if (first) printf "," 
-                        print $0
-                        first=1
-                    }
-                }
-                END { printf "]" }
-            ' "$LOG_FILE")
-            
-            # Increase timeout for history response
-            if [[ -n "$HIST_DATA" ]]; then
-                {
-                    echo -en "HTTP/1.1 200 OK\r\n"
-                    echo -en "Connection: close\r\n"
-                    echo -en "Content-Type: application/json\r\n"
-                    echo -en "Content-Length: ${#HIST_DATA}\r\n"
-                    echo -en "\r\n"
-                    echo -en "$HIST_DATA"
-                } > "$RESPONSE_FILE"
-            fi
-            
-            # Use longer timeout for history response
-            cat "$RESPONSE_FILE" | nc -l -s 0.0.0.0 -p $PORT -q 10
-
-            if [[ -z "$HIST_DATA" ]]; then
-                {
-                    echo -en "HTTP/1.1 404 Not Found\r\n"
-                    echo -en "Connection: close\r\n"
-                    echo -en "Content-Type: application/json\r\n"
-                    echo -en "Content-Length: 47\r\n"
-                    echo -en "\r\n"
-                    echo -en '{"error": "No data found for the requested time"}'
-                } > "$RESPONSE_FILE"
-            else
-                {
-                    echo -en "HTTP/1.1 200 OK\r\n"
-                    echo -en "Connection: close\r\n"
-                    echo -en "Content-Type: application/json\r\n"
-                    echo -en "Content-Length: ${#HIST_DATA}\r\n"
-                    echo -en "\r\n"
-                    echo -en "$HIST_DATA"
-                } > "$RESPONSE_FILE"
-            fi
-         else
             LATEST_METRIC=$(dd if="$PIPE" bs=4096 count=1 2>/dev/null)
+
+            if [[ -z "$LATEST_METRIC" ]] && [[ -f "$LOG_FILE" ]]; then
+                LATEST_METRIC=$(tail -n 1 "$LOG_FILE")
+                echo "Pipe empty, using last log entry: $LATEST_METRIC"
+            fi
             
             if [[ -n "$LATEST_METRIC" ]]; then
                 {
@@ -117,9 +61,19 @@ while true; do
                     echo -en "\r\n"
                     echo -en "$LATEST_METRIC"
                 } > "$RESPONSE_FILE"
+            else
+                # No data available in pipe or log
+                ERROR_MSG='{"error": "No metrics available"}'
+                {
+                    echo -en "HTTP/1.1 503 Service Unavailable\r\n"
+                    echo -en "Connection: close\r\n"
+                    echo -en "Content-Type: application/json\r\n"
+                    echo -en "Content-Length: ${#ERROR_MSG}\r\n"
+                    echo -en "\r\n"
+                    echo -en "$ERROR_MSG"
+                } > "$RESPONSE_FILE"
             fi
-        fi
-    cat "$RESPONSE_FILE" | nc -l -s 127.0.0.1 -p $PORT -q 1
+    cat "$RESPONSE_FILE" | nc -l -s 0.0.0.0 -p $PORT -q 1
     # Cleanup
     rm -f "$RESPONSE_FILE"
-done
+    done

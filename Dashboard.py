@@ -39,11 +39,37 @@ class ServerDashboard:
         self.timestamps = []
         self.max_points = 18
         self.start_time = time.time()
+        self.recent_stat=None
 
+    def metric_change(self, *args):
+        if self.recent_stat:
+            self.update_graph()
+
+        """
+        This is how we will update the graph if we change the metric before the next request
+        """
+    def update_graph(self):
+        selected = self.metric_var.get()
+        if not self.data[selected]:  # No data yet
+            return
+        self.ax.clear()
+        current_value = self.data[selected][-1]
+        line_color = get_metric_color(current_value, selected)
+        
+        self.ax.plot(self.timestamps, self.data[selected], 
+                    color=line_color, marker='o', linestyle='-', linewidth=2)
+        self.ax.set_ylabel(f"{selected} Value")
+        self.ax.set_ylim(0, 100 if selected != "Load" else 5)
+        self.ax.set_xlabel("Time(seconds)")
+        self.ax.grid(True, linestyle='--', alpha=0.6)
+        plt.setp(self.ax.get_xticklabels(), rotation=45)
+        self.fig.tight_layout()
+        self.canvas.draw()
+        
     def setup_ui(self):
         # Radio buttons for metrics
         for m in ["CPU", "Memory", "Disk", "Network", "Load"]:
-            r = ttk.Radiobutton(self.frame, text=m, variable=self.metric_var, value=m)
+            r = ttk.Radiobutton(self.frame, text=m, variable=self.metric_var, value=m, command=self.metric_change)
             r.pack(side=tk.TOP, padx=5)
 
         # Setup matplotlib figure
@@ -57,6 +83,7 @@ class ServerDashboard:
             server_stats = stats.get(self.server_name)
             
             if server_stats and isinstance(server_stats, dict):
+                self.recent_stat = server_stats #the last request we got from server
                 current_time = time.time() - self.start_time
                 self.timestamps.append(current_time)
                 
@@ -95,6 +122,7 @@ class ServerDashboard:
                     plt.setp(self.ax.get_xticklabels(), rotation=45)
                     self.fig.tight_layout()
                     self.canvas.draw()
+                    self.update_graph()
                 
                 except (ValueError, KeyError, IndexError) as e:
                     print(f"Error processing metrics for {self.server_name}: {e}")
