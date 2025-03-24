@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-from Dashboard import MainApplication
+from Dashboard.Dashboard import MainApplication
 from MetricsClient import MetricsClient
 import json
 
@@ -40,7 +40,7 @@ class ConfigWindow:
         
         threshold_frame = ttk.Frame(self.root)
         threshold_frame.pack(fill="x", padx=10)
-        
+        """     
         #default thresholds
         DEFAULT_THRESHOLDS = {
     "CPU": {"warn": 70.0, "critical": 80.0},
@@ -48,7 +48,7 @@ class ConfigWindow:
     "Disk": {"warn": 70.0, "critical": 80.0},
     "Network": {"warn": 8.0, "critical": 10.0},
     "Load": {"warn": 1.5, "critical": 2.0}
-    }
+    }"""
         
         ttk.Label(threshold_frame, text="Warning (CPU, MEM, DISK 0.0-99.9):").grid(row=0, column=0, padx=5, pady=5)
         self.warn_entry = ttk.Entry(threshold_frame)
