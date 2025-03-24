@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-from Dashboard.Dashboard import MainApplication
+from Dashboard import MainApplication
 from MetricsClient import MetricsClient
 import json
 
@@ -8,7 +8,7 @@ class ConfigWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Dashboard Configuration")
-        self.root.geometry("400x500")
+        self.root.geometry("1200x500")
         
         # Server inputs
         self.server_entries = []
